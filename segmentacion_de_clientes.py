@@ -53,7 +53,7 @@ for i in user.transacciones:
     user.alta_tarjeta(i)
     user.alta_chequera(i)
     user.compra_dolar(i)
-
+    
 columna=''
 for transaccion in user.transacciones:
     columna+= '<tr>'
@@ -65,7 +65,7 @@ import codecs
 
 f =open ('archivo.html', 'w','utf-8')
     
-html_template= """
+html_template= f"""
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -85,12 +85,11 @@ html_template= """
             <div class="row">
                 <div class="col-md-12 mx-auto" style="padding: 30px;">
                     <div class="card-header">
-                        <h1 style="font-size: 20px">Cliente {variable cliente, clase y nombre y apellido}</h1>
+                        <h1 style="font-size: 20px">Cliente: {user.tipo, user.dni, user.nombre, user.apellido}</h1>
                     </div>
                     <ul class="list-group">
-                        <li class="list-group-item"> Numero de Cuenta: {num de cuenta} </li>
-                        <li class="list-group-item"> DNI: {num de dni} </li>
-                        <li class="list-group-item"> Direccion: {direccion} </li>
+                        <li class="list-group-item"> DNI: {user.dni} </li>
+                        <li class="list-group-item"> Direccion: {"direccion"} </li>
                     </ul>
                     <table class="table table-responsive">
                         <thead>
@@ -129,6 +128,7 @@ f.close()
 
 file = codecs.open("archivo.html", 'r', "utf-8")
 print(file.read())
+
 
 
 
