@@ -6,6 +6,9 @@ class Direcciones:
         self.ciudad = ciudad
         self.provincia = provincia
         self.pais = pais
+        
+    def __str__(self):
+        return f" {self.calle} {self.numero} de {self.ciudad}"
 
 class Transacciones:
         def __init__(self,estado,tipo,cupoDiarioRestante,monto,fecha,numero,saldoEnCuenta,totalTarjetasDeCreditoActualmente,totalChequerasActualmente):
@@ -19,11 +22,18 @@ class Transacciones:
             self.CantidadTarjetas = totalTarjetasDeCreditoActualmente
             self.CantidadChequeras = totalChequerasActualmente
             self.razon = ""
+           
             
+        def array(self):
+            return [
+                self.numero,
+                self.fecha,
+                self.tipo,
+                self.estado,
+                self.monto,
+                self.razon
+            ]
             
-class Razon:
-    def __init__(self,razon):
-        self.razon = razon
 
 
 class Clientes:
@@ -33,23 +43,16 @@ class Clientes:
         self.dni = dni
         self.tipo = tipo
 
-
-
-
-
-            
-    
-    
     
 
 class Classic(Clientes):
     
     def __init__(self,nombre,apellido,dni,tipo,direcciones):
         Clientes.__init__(self, nombre, apellido, dni, tipo)
-        self.retiroDiario = 10000
-        self.transfereciaRecibida = 150000
+        self.limit = 150000
         self.transacciones = []
         self.direcciones = direcciones
+        self.comision = 0.01
     
     def puede_crear_chequera(self):
         return False
@@ -60,24 +63,27 @@ class Classic(Clientes):
     def puede_comprar_dolar(self):
         return False
     
+    def saldo_negativo(self):
+        return False
+   
     
     def retiro_efectivo(self,obj):
         if obj.tipo == "RETIRO_EFECTIVO_CAJERO_AUTOMATICO":
             if obj.estado == "RECHAZADA":
                 if obj.saldoEnCuenta < 1:
-                    print("no tiene saldo en la cuenta",obj.numero)
-                    # raz = Razon("no tiene saldo en la cuenta")
-                    # obj.razon = raz
-                    
+                    obj.razon = "no tiene saldo en la cuenta"
                 
-                if obj.monto > obj.cupoDiarioRestante:
-                    print("se vencio su monto restante diario",obj.numero)
-                    return "se vencio su monto restante diario"
-                    
+                elif obj.monto > obj.cupoDiarioRestante:
+                    obj.razon = "se vencio su cupo restante diario"
 
+                elif obj.monto > obj.saldoEnCuenta:
+                    obj.razon = "saldo insuficiente"
                 
-                if obj.monto > obj.saldoEnCuenta:
-                    print("saldo insuficiente",obj.numero)
+                elif self.saldo_negativo():
+                    if obj.monto > obj.saldoEnCuenta:
+                        nega = obj.saldoEnCuenta - obj.monto 
+                        if nega < -10000:
+                            obj.razon = "se supero su descubierto y no tiene saldo para esta transaccion"
      
     
     def alta_tarjeta(self, obj):
@@ -86,12 +92,10 @@ class Classic(Clientes):
             if obj.estado == "RECHAZADA":
                 if self.puede_crear_tarjeta():
                     if obj.CantidadTarjetas == 1 :
-                        print("usted no puede tener mas tarjetas",obj.numero)
-                        #definir razon 
+                        obj.razon =  "usted no puede tener mas tarjetas"
                     
                 else:
-                    print("esta cuenta no esta habilitada para tener una tarjeta de credito",obj.numero)
-                    #definir razon                 
+                    obj.razon = "esta cuenta no esta habilitada para tener una tarjeta de credito"             
       
                     
     def alta_chequera(self, obj):
@@ -100,26 +104,48 @@ class Classic(Clientes):
             if obj.estado == "RECHAZADA":
                 if self.puede_crear_chequera():
                     if obj.CantidadChequeras == 1 :
-                        print("usted no puede tener mas chequeras",obj.numero)
-                        #definir razon 
+                        obj.razon = "usted no puede tener mas chequeras"
                     
                 else:
-                    print("esta cuenta no esta habilitada para tener una chequera",obj.numero)
-                    #definir razon
+                    obj.razon = "esta cuenta no esta habilitada para tener una chequera"
 
 
     def compra_dolar(self, obj):
-        
          if obj.tipo == "COMPRA_DOLAR":
             if obj.estado == "RECHAZADA":
                 if self.puede_comprar_dolar():
-                    
                     if obj.monto > obj.saldoEnCuenta:
-                        print("saldo insuficiente para completar esta accion",obj.numero)
+                        obj.razon = "saldo insuficiente para completar esta accion"
                     
                 else:
-                    print("esta cuenta no esta habilitada para comprar dolares",obj.numero)
-                    #definir razon
+                    obj.razon = "esta cuenta no esta habilitada para comprar dolares"
+    
+                    
+    def transferencia_enviada(self, obj):
+        if obj.tipo == "TRANSFERENCIA_ENVIADA":
+            if obj.estado == "RECHAZADA":
+                re = (obj.monto * self.comision) + obj.monto
+                
+                if obj.monto > obj.saldoEnCuenta:
+                    obj.razon = "saldo insuficiente"
+                
+                if obj.monto == obj.saldoEnCuenta:    
+                    if obj.saldoEnCuenta < re:
+                        obj.razon = "su saldo no cubre la comision por transferencia"
+                    
+                if self.saldo_negativo():
+                    if obj.monto > obj.saldoEnCuenta:
+                        nega = obj.saldoEnCuenta - obj.monto
+                        if nega < -10000:
+                            obj.razon = "se supero su descubierto y no tiene saldo para esta transaccion"
+
+
+    def transferencia_recibida(self, obj):
+        if obj.tipo == "TRANSFERENCIA_RECIBIDA":
+            if obj.estado == "RECHAZADA":
+                if obj.monto > self.limit:
+                    obj.razon = f"no puede recibir una transferencia mayor a {self.limit} sin previo aviso"
+        
                     
 
 
@@ -128,95 +154,192 @@ class Gold(Clientes):
     
     def __init__(self,nombre,apellido,dni,tipo, direcciones):
         Clientes.__init__(self, nombre, apellido, dni, tipo)
-        self.retiroDiario = 20000
-        self.transfereciaRecibida = 500000
+        self.limit = 500000
         self.transacciones = []
         self.direcciones = direcciones
+        self.comision = 0.005
     
     def puede_crear_chequera(self):
-        return False
+        return True
     
     def puede_crear_tarjeta(self):
         return True
     
     def puede_comprar_dolar(self):
         return True
+    
+    def saldo_negativo(self):
+        return True
+    
+    def retiro_efectivo(self,obj):
+        if obj.tipo == "RETIRO_EFECTIVO_CAJERO_AUTOMATICO":
+            if obj.estado == "RECHAZADA":
+                if obj.saldoEnCuenta < 1:
+                    obj.razon = "no tiene saldo en la cuenta"
+                
+                elif obj.monto > obj.cupoDiarioRestante:
+                    obj.razon = "se vencio su cupo restante diario"
+
+                elif obj.monto > obj.saldoEnCuenta:
+                    obj.razon = "saldo insuficiente"
+                
+                elif self.saldo_negativo():
+                    if obj.monto > obj.saldoEnCuenta:
+                        nega = obj.saldoEnCuenta - obj.monto 
+                        if nega < -10000:
+                            obj.razon = "se supero su descubierto y no tiene saldo para esta transaccion"
+    
+    
+    def alta_tarjeta(self, obj):
+        if obj.tipo == "ALTA_TARJETA_CREDITO":
+            if obj.estado == "RECHAZADA":
+                if self.puede_crear_tarjeta():
+                    if obj.CantidadTarjetas == 1 :
+                        obj.razon =  "usted no puede tener mas tarjetas"
+                    
+                else:
+                    obj.razon = "esta cuenta no esta habilitada para tener una tarjeta de credito"                             
+    
+                    
+    def alta_chequera(self, obj):
+         if obj.tipo == "ALTA_CHEQUERA":
+            if obj.estado == "RECHAZADA":
+                if self.puede_crear_chequera():
+                    if obj.CantidadChequeras == 1 :
+                        obj.razon = "usted no puede tener mas chequeras"
+                    
+                else:
+                    obj.razon = "esta cuenta no esta habilitada para tener una chequera"
+
+
+    def compra_dolar(self, obj):
+         if obj.tipo == "COMPRA_DOLAR":
+            if obj.estado == "RECHAZADA":
+                if self.puede_comprar_dolar():
+                    if obj.monto > obj.saldoEnCuenta:
+                        obj.razon = "saldo insuficiente para completar esta accion"
+                    
+                else:
+                    obj.razon = "esta cuenta no esta habilitada para comprar dolares"
+
+    
+                    
+    def transferencia_enviada(self, obj):
+        if obj.tipo == "TRANSFERENCIA_ENVIADA":
+            if obj.estado == "RECHAZADA":
+                re = (obj.monto * self.comision) + obj.monto
+                
+                if obj.monto > obj.saldoEnCuenta:
+                    obj.razon = "saldo insuficiente"
+                
+                if obj.monto == obj.saldoEnCuenta :
+                    if obj.saldoEnCuenta < re :
+                        obj.razon = "su saldo no cubre la comision por transferencia"
+                        
+                if self.saldo_negativo():
+                    if obj.monto > obj.saldoEnCuenta:
+                        nega = obj.saldoEnCuenta - obj.monto
+                        if nega < -10000:
+                            obj.razon = "se supero su descubierto y no tiene saldo para esta transaccion"
+
+     
+    def transferencia_recibida(self, obj):
+        if obj.tipo == "TRANSFERENCIA_RECIBIDA":
+            if obj.estado == "RECHAZADA":
+                if obj.monto > self.limit:
+                    obj.razon = f"no puede recibir una transferencia mayor a {self.limit} sin previo aviso"
+        
+                    
+
+class Black(Clientes):
+    
+    def __init__(self,nombre,apellido,dni,tipo ,direcciones):
+        Clientes.__init__(self, nombre, apellido, dni, tipo)
+        self.transacciones = []
+        self.direcciones = direcciones
+    
+    def puede_crear_chequera(self):
+        return True
+    
+    def puede_crear_tarjeta(self):
+        return True
+    
+    def puede_comprar_dolar(self):
+        return True
+    
+    def saldo_negativo(self):
+        return True 
     
     
     def retiro_efectivo(self,obj):
         if obj.tipo == "RETIRO_EFECTIVO_CAJERO_AUTOMATICO":
             if obj.estado == "RECHAZADA":
                 if obj.saldoEnCuenta < 1:
-                    print("no tiene saldo en la cuenta",obj.numero)
-                    # raz = Razon("no tiene saldo en la cuenta")
-                    # obj.razon = raz
-                    
+                    obj.razon = "no tiene saldo en la cuenta"
                 
-                if obj.monto > obj.cupoDiarioRestante:
-                    print("se vencio su monto restante diario",obj.numero)
-                    # raz = Razon("se vencio su monto restante diario")
-                    # obj.razon.append(raz)
+                elif obj.monto > obj.cupoDiarioRestante:
+                    obj.razon = "se vencio su cupo restante diario"
+
+                elif obj.monto > obj.saldoEnCuenta:
+                    obj.razon = "saldo insuficiente"
                 
-                if obj.monto > obj.saldoEnCuenta:
-                    print("saldo insuficiente",obj.numero)
-    
-    
+                elif self.saldo_negativo():
+                    if obj.monto > obj.saldoEnCuenta:
+                        nega = obj.saldoEnCuenta - obj.monto 
+                        if nega < -10000:
+                            obj.razon = "se supero su descubierto y no tiene saldo para esta transaccion"
     
     
     def alta_tarjeta(self, obj):
-        
-         if obj.tipo == "ALTA_TARJETA_CREDITO":
+        if obj.tipo == "ALTA_TARJETA_CREDITO":
             if obj.estado == "RECHAZADA":
                 if self.puede_crear_tarjeta():
-                    if obj.CantidadTarjetas == 1 :
-                        print("usted no puede tener mas tarjetas",obj.numero)
-                        #definir razon 
+                    if obj.CantidadTarjetas == 5 :
+                        obj.razon =  "usted no puede tener mas tarjetas"
                     
                 else:
-                    print("esta cuenta no esta habilitada para tener una tarjeta de credito",obj.numero)
-                    #definir razon                
+                    obj.razon = "esta cuenta no esta habilitada para tener una tarjeta de credito"                             
+    
                     
     def alta_chequera(self, obj):
-        
          if obj.tipo == "ALTA_CHEQUERA":
             if obj.estado == "RECHAZADA":
                 if self.puede_crear_chequera():
-                    if obj.CantidadChequeras == 1 :
-                        print("usted no puede tener mas chequeras",obj.numero)
-                        #definir razon 
+                    if obj.CantidadChequeras == 2 :
+                        obj.razon = "usted no puede tener mas chequeras"
                     
                 else:
-                    print("esta cuenta no esta habilitada para tener una chequera",obj.numero)
-                    #definir razon
+                    obj.razon = "esta cuenta no esta habilitada para tener una chequera"
+
 
     def compra_dolar(self, obj):
-        
          if obj.tipo == "COMPRA_DOLAR":
             if obj.estado == "RECHAZADA":
                 if self.puede_comprar_dolar():
-                    
                     if obj.monto > obj.saldoEnCuenta:
-                        print("saldo insuficiente para completar esta accion",obj.numero)
+                        obj.razon = "saldo insuficiente para completar esta accion"
                     
                 else:
-                    print("esta cuenta no esta habilitada para comprar dolares",obj.numero)
-                    #definir razon
+                    obj.razon = "esta cuenta no esta habilitada para comprar dolares"
 
+                    
+    def transferencia_enviada(self, obj):
+        if obj.tipo == "TRANSFERENCIA_ENVIADA":
+            if obj.estado == "RECHAZADA":
+                
+                if obj.monto > obj.saldoEnCuenta:
+                    obj.razon = "saldo insuficiente"
+                    
+                if self.saldo_negativo():
+                    if obj.monto > obj.saldoEnCuenta:
+                        nega = obj.saldoEnCuenta - obj.monto
+                        if nega < -10000:
+                            obj.razon = "se supero su descubierto y no tiene saldo para esta transaccion"
+                
 
-class Black(Clientes):
-    
-    def __init__(self,nombre,apellido,dni,tipo ,direcciones):
-        Clientes.__init__(self, nombre, apellido, dni, tipo)
-        self.retiroDiario = 100000
-        self.transfereciaRecibida = True
-        self.transacciones = []
-        self.direcciones = direcciones
-    
-    def puede_crear_chequera(self):
-        return True
-    
-    def puede_crear_tarjeta(self):
-        return True
-    
-    def puede_comprar_dolar(self):
-        return True
+    def transferencia_recibida(self, obj):
+        if obj.tipo == "TRANSFERENCIA_RECIBIDA":
+            if obj.estado == "RECHAZADA":
+                pass
+                # if obj.monto > self.limit:
+                #     obj.razon = f"no puede recibir una transferencia mayor a {self.limit} sin previo aviso"    

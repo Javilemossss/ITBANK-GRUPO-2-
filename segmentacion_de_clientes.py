@@ -1,10 +1,15 @@
 
 import json
 import sys
+import os
 from clientes import *
-obj_json= sys.argv[1]
 
-list_tran = []
+try:
+    obj_json= sys.argv[1]
+except IndexError:
+    print("ERROR NO SE ENCUENTRA EL ARCHIVO .json")
+    exit()
+
 
 #accedo al json que lo paso como parametro con sys
 with open(obj_json,'r')as archivo:
@@ -30,7 +35,7 @@ if datos_json['tipo'] == 'GOLD':
 if datos_json['tipo'] == 'BLACK':
     user = Black(datos_json['nombre'], datos_json['apellido'], datos_json['dni'], datos_json['tipo'], direc)
 
-#creo el obj que tiene las transacciones y los guardo adentro de un parametro que es una lista
+#creo el obj que tiene las transacciones y los guardo adentro de un atributo que es una lista
 for i in datos_json['transacciones']:
     tra = Transacciones(
         i['estado'], 
@@ -48,24 +53,33 @@ for i in datos_json['transacciones']:
 
 
 for i in user.transacciones:
+    
     user.retiro_efectivo(i)
-    print("razon ", user.retiro_efectivo(i))
     user.alta_tarjeta(i)
     user.alta_chequera(i)
     user.compra_dolar(i)
+    user.transferencia_enviada(i)
+    user.transferencia_recibida(i)
     
+for i in user.transacciones:
+    print("numero",i.numero ,i.estado , i.tipo ,"saldo:",i.saldoEnCuenta,"monto:", i.monto, "cupodiario:" , i.cupoDiarioRestante , "RAZON:",i.razon, i.fecha)
+
+
+
 columna=''
-for transaccion in user.transacciones:
+for i in user.transacciones:
     columna+= '<tr>'
-    for cadatributo in user.transacciones():
-        columna+= f'<td> {cadatributo} </td>'
+    for n in i.array():
+        columna+= f'<td> {n} </td>'
     columna += '</td>'
 
-import codecs
 
-f =open ('archivo.html', 'w','utf-8')
-    
-html_template= f"""
+
+import codecs
+with codecs.open ('archivo.html', 'w','utf-8') as html_file:
+        
+    html_content= f"""
+ 
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -85,12 +99,8 @@ html_template= f"""
             <div class="row">
                 <div class="col-md-12 mx-auto" style="padding: 30px;">
                     <div class="card-header">
-                        <h1 style="font-size: 20px">Cliente: {user.tipo, user.dni, user.nombre, user.apellido}</h1>
+                        <h1 style="font-size: 20px">Cliente: {user.nombre, user.apellido, user.dni, user.tipo}</h1>
                     </div>
-                    <ul class="list-group">
-                        <li class="list-group-item"> DNI: {user.dni} </li>
-                        <li class="list-group-item"> Direccion: {"direccion"} </li>
-                    </ul>
                     <table class="table table-responsive">
                         <thead>
                         <tr>
@@ -106,56 +116,34 @@ html_template= f"""
                         <tr>
                             {columna}
                         </tr>
-                            
-                            
+                                
+                                
                         </tbody>
                     </table>
                 </div>
-                    
-                            
+                        
+                                
             </div>
-
         </div>
-
-    /div>
-
+    </div>
 </body>
-</html>"""
+</html>
+    """
 
-f.write(html_template)
+    html_file.write(html_content)
 
-f.close()
+html_file.close()
 
 file = codecs.open("archivo.html", 'r', "utf-8")
 print(file.read())
 
 
+print(user.direcciones)
 
 
 
+# <ul class="list-group">
+                    #     <li class="list-group-item"> DNI: {user.dni} </li>
+                    #     <li class="list-group-item"> Direccion: "direccion" </li>
+                    # </ul>
 
-
-
-
-
-# for i in user.transacciones:
-
-#     # print(i.tipo)
-#     # print("")
-    
-
-
-
-
-
-
-
-# class ALTA_TARJETA_CREDITO:
-    
-#     def LTA_TARJETA_CREDITO():
-#         if puede_crear_tarjeta():
-#             if i['tipo'] == 'ALTA_TARJETA_CREDITO' and i['estado'] != 'ACEPTADA' and i['totalTarjetasDeCreditoActualmente'] == 0 :
-#                 print("usted ya tiene una tarjeta de credito")
-                
-#         else:
-#             print("tu tipo de cuenta no es apta para este tipo de transacciones")
