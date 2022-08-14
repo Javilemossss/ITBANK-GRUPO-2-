@@ -26,15 +26,13 @@ WHERE cli.customer_name = 'Brendan' ORDER by suc.branch_name
 --Seleccionar de la tabla de préstamos, los préstamos con un importe mayor a $80.000 y los préstamos prendarios utilizando la unión de tablas/consultas 
 --(recordar que en las bases de datos la moneda se guarda como integer, en este caso con 2 centavos)
 --primero crear vista para guardar los importes con centavos
-CREATE VIEW centavos (account_id, tipo_cuenta_ID,customer_id,balance, monto) as
-SELECT
-	account_id,tipo_cuenta_ID,customer_id,balance,iban,
-	CAST (balance AS money) as monto
-	FROM cuenta 
+select * from prestamo
+select count() from prestamo where loan_type="PRENDARIO" and loan_total > 80000
+select * from loan_total
 
 
 -- Seleccionar los prestamos cuyo importe sea mayor que el importe medio de todos los prestamos
-SELECT * FROM prestamo WHERE loan_total > (SELECT AVG(loan_total)FROM prestamo)
+Select * from prestamo where loan_total > (select avg(loan_total) as promedio FROM PRESTAMO )
 
 --Contar la cantidad de clientes menores a 50 años
 
